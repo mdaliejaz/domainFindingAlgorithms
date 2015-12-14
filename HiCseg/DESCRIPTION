@@ -1,14 +1,14 @@
 Package: HiCseg
 Type: Package
 Title: Detection of domains in HiC data
-Version: ___
-Date: ___
-Author: ___
-Maintainer: ___
+Version: 1.0
+Date: 12/14/2015
+Author: Muhammad Ali Ejaz, Neha, Anupam, Supriya
+Maintainer: Muhammad Ali Ejaz <mdaliejaz@gmail.com>
 Description: This package allows you to detect domains in HiC data by rephrasing this problem as a two-dimensional segmentation issue.
-License: ___
-Packaged: ___
-Depends: ___
-NeedsCompilation: ___
+License: GPL-2
+Packaged: 14/12/2015 12:17:25 UTC; mdaliejaz
+Depends: R (>= 2.10)
+NeedsCompilation: yes
 Repository: ___
 Date/Publication: ___

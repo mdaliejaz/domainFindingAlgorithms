@@ -15,8 +15,9 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 {
 	int size_matrix = *size;
 	int Kmax = *K;
-	char *loi = *distrib;
+	char *distribution = *distrib;
 	char *model = *modele;
+
 	int i, j, k, l, E, t, size_mat_extr, size_mat_Exterieur_extr, i_coin, j_coin, size_coin, n_coin, size_mu;
 	double somme, Ybar, logYbar, logphiplusYbar, logmuhat, logphiplusmuhat, loglambdahat, somme2, somme_carr;
 	double max, min, mu_hat, var_hat, phi_hat, lambda_hat, mu;
@@ -27,7 +28,6 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 	double vecteur[size_matrix - 1];
 	double J[Kmax];
 	double t_est[Kmax][Kmax];
-	double resultats[Kmax][Kmax + 2];
 	double y[size_matrix][size_matrix], Delta[size_matrix][size_matrix];
 	double Exterieur[size_matrix][size_matrix], T[size_matrix][size_matrix], D[size_matrix][size_matrix];
 	double R[size_matrix][size_matrix], Tcarr[size_matrix][size_matrix], Dcarr[size_matrix][size_matrix], Rcarr[size_matrix][size_matrix];
@@ -36,15 +36,12 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 
 	// exit if model is neither D nor Dplus
 	if ((strcmp(model, "D") != 0) && (strcmp(model, "Dplus") != 0))
-	{
 		return EXIT_FAILURE;
-	}
 
 	// initialize all the matrices
-	for (i = 0; i < size_matrix; i++)
-	{
-		for (j = 0; j < size_matrix; j++)
-		{
+	for (i = 0; i < size_matrix; i++) {
+		for (j = 0; j < size_matrix; j++) {
+
 			y[i][j] = matrix[i * size_matrix + j];
 			// 1E100 = scientific notation for vary large number.
 			// -1E100 = (-) 1 followed by 100 zeroes
@@ -60,52 +57,48 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 	}
 
 	// Poisson Distribution
-	if (strcmp(loi, "P") == 0)
-	{
+	if (strcmp(distribution, "P") == 0) {
 		/////  Calculating amounts in trapezes
 		T[0][0] = y[0][0];
 		D[0][0] = y[0][0];
-		if (D[0][0] != 0) Delta[0][0] = D[0][0] * (log(D[0][0]) - 1);
-
+		if (D[0][0] != 0)
+			Delta[0][0] = D[0][0] * (log(D[0][0]) - 1);
 		for (k = 1; k < size_matrix; k++)
 		{
 			T[0][k] = T[0][(k - 1)] + y[0][k];
 			D[k][k] = y[k][k];
 			somme = 0;
-			for (i = 0; i <= k; i++) somme = somme + y[i][k];
+			for (i = 0; i <= k; i++)
+				somme = somme + y[i][k];
 			T[k][k] = T[(k - 1)][(k - 1)] + somme;
 			D[0][k] = T[k][k];
-			if (D[0][k] != 0) Delta[0][k] = D[0][k] * (log(D[0][k]) - log((pow(k, 2) + k) / 2) - 1);
-			if (D[k][k] != 0) Delta[k][k] = D[k][k] * (log(D[k][k]) - 1);
+			if (D[0][k] != 0)
+				Delta[0][k] = D[0][k] * (log(D[0][k]) - log((pow(k, 2) + k) / 2) - 1);
+			if (D[k][k] != 0)
+				Delta[k][k] = D[k][k] * (log(D[k][k]) - 1);
 		}
 
-		if (strcmp(model, "Dplus") == 0)
-		{
-			for (i = 1; i < (size_matrix - 1); i++)
-			{
-				for (j = (i + 1); j < size_matrix; j++)
-				{
+		if (strcmp(model, "Dplus") == 0) {
+			for (i = 1; i < (size_matrix - 1); i++) {
+				for (j = (i + 1); j < size_matrix; j++) {
 					somme = 0;
 					for (k = 0; k <= i; k++) somme = somme + y[k][j];
 					T[i][j] = T[i][(j - 1)] + somme;
 					R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
 					D[i][j] = T[j][j] - T[(i - 1)][j];
 					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
-					if ((D[i][j] != 0) && (size_mat_extr != 0))
-					{
+					if ((D[i][j] != 0) && (size_mat_extr != 0)) {
 						Delta[i][j] = D[i][j] * (log(D[i][j]) - log(size_mat_extr) - 1);
 					}
 
 					size_mat_extr = i * (j - i + 1);
-					if ((R[i][j] != 0) && (size_mat_extr != 0))
-					{
+					if ((R[i][j] != 0) && (size_mat_extr != 0)) {
 						Exterieur[i][j] = R[i][j] * (log(R[i][j]) - log(size_mat_extr) - 1);
 					}
 				}
 			}
 		}
-		else if (strcmp(model, "D") == 0)
-		{
+		else if (strcmp(model, "D") == 0) {
 
 			///// Calculating lambda_hat
 			n_coin = (int)floor(size_matrix / 4);
@@ -114,12 +107,9 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 			i_coin = n_coin;
 			somme = 0.;
 
-			for (i = 0; i < i_coin; i++)
-			{
-				for (j = j_coin; j < size_matrix; j++)
-				{
-					if ((j - j_coin) >= i)
-					{
+			for (i = 0; i < i_coin; i++) {
+				for (j = j_coin; j < size_matrix; j++) {
+					if ((j - j_coin) >= i) {
 						somme = somme + y[i][j];
 					}
 				}
@@ -127,30 +117,23 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 			lambda_hat = somme / size_coin;
 			loglambdahat = log(lambda_hat);
 
-			for (i = 1; i < (size_matrix - 1); i++)
-			{
-				for (j = (i + 1); j < size_matrix; j++)
-				{
+			for (i = 1; i < (size_matrix - 1); i++) {
+				for (j = (i + 1); j < size_matrix; j++) {
 					somme = 0;
 					for (k = 0; k <= i; k++) somme = somme + y[k][j];
 					T[i][j] = T[i][(j - 1)] + somme;
 					R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
 					D[i][j] = T[j][j] - T[(i - 1)][j];
 					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
-					if ((D[i][j] != 0) && (size_mat_extr != 0))
-					{
+					if ((D[i][j] != 0) && (size_mat_extr != 0)) {
 						Delta[i][j] = D[i][j] * (log(D[i][j]) - log(size_mat_extr) - 1);
 					}
 					size_mat_extr = i * (j - i + 1);
 					Exterieur[i][j] = R[i][j] * loglambdahat - size_mat_extr * lambda_hat;
-
 				}
 			}
 		}
-	}
-
-	else if (strcmp(loi, "B") == 0)
-	{
+	} else if (strcmp(distribution, "B") == 0) {
 		///// Calculating phi_hat and mu_hat
 
 		n_coin = (int)floor(size_matrix / 4);
@@ -245,10 +228,7 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 				}
 			}
 		}
-	}
-
-	else if (strcmp(loi, "G") == 0)
-	{
+	} else if (strcmp(distribution, "G") == 0) {
 		n_coin = (int)floor(size_matrix / 4);
 		size_coin = (n_coin + 1) * n_coin / 2;
 		j_coin = 3 * n_coin;
@@ -351,7 +331,8 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 				}
 			}
 		}
-	}
+	} else
+		return EXIT_FAILURE;
 
 	/////// dynamic programming ///////////
 	for (i = 0; i < Kmax - 1; i++)
