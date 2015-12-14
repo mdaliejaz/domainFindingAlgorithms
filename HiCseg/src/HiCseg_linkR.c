@@ -53,22 +53,32 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 		}
 	}
 
+
+	/* The following code is common for all the three distributions
+	 * The first row and the diagonal of matrix T and D are populated
+	 */
+	/////  Calculating amounts in trapezes
+	T[0][0] = y[0][0];
+	D[0][0] = y[0][0];
+	for (k = 1; k < size_matrix; k++) {
+		T[0][k] = T[0][(k - 1)] + y[0][k];
+		D[k][k] = y[k][k];
+		somme = 0;
+		for (i = 0; i <= k; i++) {
+			somme = somme + y[i][k];
+		}
+		T[k][k] = T[(k - 1)][(k - 1)] + somme;
+		D[0][k] = T[k][k];
+	}
+
+
 	// Poisson Distribution
 	if (strcmp(distribution, "P") == 0) {
 		/////  Calculating amounts in trapezes
-		T[0][0] = y[0][0];
-		D[0][0] = y[0][0];
 		if (D[0][0] != 0)
 			Delta[0][0] = D[0][0] * (log(D[0][0]) - 1);
 		for (k = 1; k < size_matrix; k++)
 		{
-			T[0][k] = T[0][(k - 1)] + y[0][k];
-			D[k][k] = y[k][k];
-			somme = 0;
-			for (i = 0; i <= k; i++)
-				somme = somme + y[i][k];
-			T[k][k] = T[(k - 1)][(k - 1)] + somme;
-			D[0][k] = T[k][k];
 			if (D[0][k] != 0)
 				Delta[0][k] = D[0][k] * (log(D[0][k]) - log((pow(k, 2) + k) / 2) - 1);
 			if (D[k][k] != 0)
@@ -156,18 +166,10 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 		phi_hat = pow(mu_hat, 2) / (var_hat - mu_hat);
 
 		/////  Calculating amounts in trapezes
-		T[0][0] = y[0][0];
-		D[0][0] = y[0][0];
 		if (((phi_hat + D[0][0]) > 0) && (D[0][0] > 0)) Delta[0][0] = -(phi_hat + D[0][0]) * log(phi_hat + D[0][0]) + D[0][0] * log(D[0][0]);
 
 		for (k = 1; k < size_matrix; k++)
 		{
-			T[0][k] = T[0][(k - 1)] + y[0][k];
-			D[k][k] = y[k][k];
-			somme = 0;
-			for (i = 0; i <= k; i++) somme = somme + y[i][k];
-			T[k][k] = T[(k - 1)][(k - 1)] + somme;
-			D[0][k] = T[k][k];
 			size_mu = ((pow(k + 1, 2) + k + 1) / 2);
 			mu = D[0][k] / size_mu;
 			if (D[0][k] > 0) Delta[0][k] = -(size_mu * phi_hat + D[0][k]) * log(phi_hat + mu) + D[0][k] * log(mu);
@@ -245,27 +247,20 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 		mu_hat = somme / size_coin;
 
 		/////  Calculating amounts in trapezes
-		T[0][0] = y[0][0];
-		D[0][0] = y[0][0];
 		Tcarr[0][0] = pow(y[0][0], 2);
 		Dcarr[0][0] = pow(y[0][0], 2);
 		Delta[0][0] = 0;
 
 		for (k = 1; k < size_matrix; k++)
 		{
-			T[0][k] = T[0][(k - 1)] + y[0][k];
 			Tcarr[0][k] = Tcarr[0][(k - 1)] + pow(y[0][k], 2);
-			D[k][k] = y[k][k];
 			Dcarr[k][k] = pow(y[k][k], 2);
-			somme = 0; somme_carr = 0;
+			somme_carr = 0;
 			for (i = 0; i <= k; i++)
 			{
-				somme = somme + y[i][k];
 				somme_carr = somme_carr + pow(y[i][k], 2);
 			}
-			T[k][k] = T[(k - 1)][(k - 1)] + somme;
 			Tcarr[k][k] = Tcarr[(k - 1)][(k - 1)] + somme_carr;
-			D[0][k] = T[k][k];
 			Dcarr[0][k] = Tcarr[k][k];
 			mu = D[0][k] / ((pow(k + 1, 2) + k + 1) / 2);
 			Delta[0][k] = -(Dcarr[0][k] - D[0][k] * mu);
