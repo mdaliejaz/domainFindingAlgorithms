@@ -1,0 +1,14 @@
+Package: HiCseg
+Type: Package
+Title: Detection of domains in HiC data
+Version: ___
+Date: ___
+Author: ___
+Maintainer: ___
+Description: This package allows you to detect domains in HiC data by rephrasing this problem as a two-dimensional segmentation issue.
+License: ___
+Packaged: ___
+Depends: ___
+NeedsCompilation: ___
+Repository: ___
+Date/Publication: ___
