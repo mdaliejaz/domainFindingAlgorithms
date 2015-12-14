@@ -10,7 +10,6 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf_gamma.h>
 
-
 int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap, double* Jvect, int* t_est_mat, char** modele)
 {
 	int size_matrix = *size;
@@ -18,15 +17,24 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 	char *distribution = *distrib;
 	char *model = *modele;
 
-	int i, j, k, l, E, t, size_mat_extr, size_mat_Exterieur_extr, i_coin, j_coin, size_coin, n_coin, size_mu;
-	double somme, Ybar, logYbar, logphiplusYbar, logmuhat, logphiplusmuhat, loglambdahat, somme2, somme_carr;
+	int i, j, k, l, t, size_mat_extr, size_mat_Exterieur_extr, i_coin, j_coin, size_coin, n_coin, size_mu;
+	double somme, Ybar, logYbar, logphiplusYbar, logmuhat, logphiplusmuhat, loglambdahat, somme_carr;
+	//ME: removed
+	//double somme2;
+	//int E;
+	//END ME:
 	double max, min, mu_hat, var_hat, phi_hat, lambda_hat, mu;
 	int ind_max, ind_min;
 	int u;
-	int kk;
-	int Kchap;
+	//ME: removed
+	//int kk;
+	//int Kchap;
+	//END ME:
+	
 	double vecteur[size_matrix - 1];
-	double J[Kmax];
+	//ME: removed
+	//double J[Kmax];
+	//END ME:
 	double t_est[Kmax][Kmax];
 	double y[size_matrix][size_matrix], Delta[size_matrix][size_matrix];
 	double Exterieur[size_matrix][size_matrix], T[size_matrix][size_matrix], D[size_matrix][size_matrix];
@@ -335,28 +343,51 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 		return EXIT_FAILURE;
 
 	/////// dynamic programming ///////////
-	for (i = 0; i < Kmax - 1; i++)
+	
+	//ME: removed
+	//for (i = 0; i < Kmax - 1; i++)
+	//{
+	//	for (j = 0; j < size_matrix; j++)
+	//	{
+	//		I[i][j] = -1E100;
+	//		t_matrix[i][j] = -1;
+	//	}
+	//}
+
+	//for (j = 0; j < size_matrix; j++)
+	//{
+	//	I[Kmax - 1][j] = -1E100;
+	//}
+
+	//for (j = 0; j <= size_matrix - 1; j++)
+	//{
+	//	I[0][j] = Delta[0][j];
+	//}
+	//END ME:
+
+	for (i = 0; i <= Kmax - 1; i++)
 	{
 		for (j = 0; j < size_matrix; j++)
 		{
-			I[i][j] = -1E100;
-			t_matrix[i][j] = -1;
+			if(i < Kmax-1)
+				t_matrix[i][j] = -1;
+			if(i!=0)
+				I[i][j] = -1E100;
+			else
+				I[i][j] = Delta[0][j];
 		}
 	}
 
-	for (j = 0; j < size_matrix; j++)
-	{
-		I[Kmax - 1][j] = -1E100;
-	}
+	//ME: removed
+	//for (j = 0; j < size_matrix - 1; j++)
+	//{
+	//	vecteur[j] = -1E100;
+	//	I[0][j] = Delta[0][j];
+	//}
+	//I[0][size_matrix - 1] = Delta[0][size_matrix - 1];
+	//END ME:
 
-	for (j = 0; j < size_matrix - 1; j++)
-	{
-		vecteur[j] = -1E100;
-		I[0][j] = Delta[0][j];
-	}
-	I[0][size_matrix - 1] = Delta[0][size_matrix - 1];
-
-	for (k = 1; k < Kmax - 1; k++)
+	for (k = 1; k <= Kmax - 1; k++)
 	{
 		for (l = k; l < size_matrix; l++)
 		{
@@ -364,7 +395,6 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 			{
 				vecteur[i] = -1E100;
 			}
-
 			for (u = 1; u <= l; u++)
 			{
 				vecteur[u - 1] = I[k - 1][u - 1] + Delta[u][l] + Exterieur[u][l];
@@ -384,78 +414,111 @@ int Function_HiC_R(int *size, int *K, char** distrib, double* matrix, int* tchap
 		}
 	}
 
-	for (i = 0; i < size_matrix - 1; i++)
+	//ME: removed
+	//for (i = 0; i < size_matrix - 1; i++)
+	//{
+	//	vecteur[i] = -1E100;
+	//}
+	//ind_max = 0;
+	//max = vecteur[0];
+	//for (u = 1; u < size_matrix; u++)
+	//{
+	//	vecteur[u - 1] = I[Kmax - 2][u - 1] + Delta[u][size_matrix - 1] + Exterieur[u][size_matrix - 1];
+	//}
+	//for (i = 0; i < size_matrix - 1; i++)
+	//{
+	//	if (vecteur[i] > max)
+	//	{
+	//		max = vecteur[i];
+	//		ind_max = i;
+	//	}
+	//}
+	//I[Kmax - 1][size_matrix - 1] = vecteur[ind_max];
+	//t_matrix[Kmax - 2][size_matrix - 1] = ind_max;
+	//END ME:
+
+	//ME: removed
+	//ind_max = 0;
+	//max = I[0][size_matrix - 1];
+	//for (i = 0; i < Kmax; i++)
+	//{
+	//	J[i] = I[i][size_matrix - 1];
+	//	if (J[i] > max)
+	//	{
+	//		max = J[i];
+	//		ind_max = i;
+	//	}
+	//}
+	//END ME:
+
+	//ME: max of the last column of I-matrix
+	ind_max=0;
+	max=I[0][size_matrix-1];
+	for (i=0;i<Kmax;i++)
 	{
-		vecteur[i] = -1E100;
-	}
-	ind_max = 0;
-	max = vecteur[0];
-	for (u = 1; u < size_matrix; u++)
-	{
-		vecteur[u - 1] = I[Kmax - 2][u - 1] + Delta[u][size_matrix - 1] + Exterieur[u][size_matrix - 1];
-	}
-	for (i = 0; i < size_matrix - 1; i++)
-	{
-		if (vecteur[i] > max)
+		Jvect[i] = I[i][size_matrix-1];
+		if((I[i][size_matrix-1])>max)
 		{
-			max = vecteur[i];
-			ind_max = i;
+			max=I[i][size_matrix-1];
+			ind_max=i;
 		}
 	}
+	//END ME:
 
-	I[Kmax - 1][size_matrix - 1] = vecteur[ind_max];
+	//ME: removed
+	//for (i = 0; i < Kmax; i++)
+	//{
+	//	for (j = 0; j < Kmax; j++)
+	//	{
+	//		t_est[i][j] = -1;
+	//	}
+	//}
+	//for (i = 0; i < Kmax; i++)
+	//{
+	//	t_est[i][i] = size_matrix - 1;
+	//}
+	//END ME:
 
-	t_matrix[Kmax - 2][size_matrix - 1] = ind_max;
-
-	ind_max = 0;
-	max = I[0][size_matrix - 1];
-	for (i = 0; i < Kmax; i++)
-	{
-		J[i] = I[i][size_matrix - 1];
-
-		if (J[i] > max)
-		{
-			max = J[i];
-			ind_max = i;
-		}
-	}
-
+	//ME: clubbed into one
 	for (i = 0; i < Kmax; i++)
 	{
 		for (j = 0; j < Kmax; j++)
 		{
-			t_est[i][j] = -1;
+			if(i != j)
+				t_est[i][j] = -1;
+			else
+				t_est[i][j] = size_matrix - 1;
 		}
 	}
-
-	for (i = 0; i < Kmax; i++)
-	{
-		t_est[i][i] = size_matrix - 1;
-	}
+	//END ME:
 
 	/////// Calculating change-point /////////
-	for (kk = 1; kk < Kmax; kk++)
+	//ME: replacec kk by j
+	for (j = 1; j < Kmax; j++)
 	{
-		for (k = kk - 1; k >= 0; k--)
+		for (k = j - 1; k >= 0; k--)
 		{
-			t_est[kk][k] = t_matrix[k][(int)t_est[kk][k + 1]];
+			t_est[j][k] = t_matrix[k][(int)t_est[j][k + 1]];
 		}
 	}
-
+	//END ME:
 
 	//////// Calculating Kchap /////////
-
-	Kchap = ind_max;
-
+	
+	//ME: removed
+	//Kchap = ind_max;
+	//END ME:
+	
 	for (i = 0; i < Kmax; i++)
 	{
-		tchap[i] = (int) t_est[Kchap][i] + 1;
-		Jvect[i] = J[i];
+		tchap[i] = (int) t_est[ind_max][i] + 1;
+		//ME: removed
+		//Jvect[i] = J[i];
+		//END ME:
 		for (j = 0; j < Kmax; j++)
 		{
 			t_est_mat[i * Kmax + j] = (int) t_est[i][j] + 1;
 		}
 	}
-
 	return (EXIT_SUCCESS);
 }
