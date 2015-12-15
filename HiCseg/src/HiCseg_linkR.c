@@ -320,6 +320,12 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 
 	/////// dynamic programming ///////////
 
+	/*
+	* Computation of the elements of matrix 'I'
+	* The value of the elements of the first row of matrix 'I' is the same as the
+	* elements of the first row of Delta matrix
+	* The remaining elements of the 'I' matrix are initialized to -1E100.
+	*/
 	for (i = 0; i <= max_chng_pts - 1; i++) {
 		for (j = 0; j < size_matrix; j++) {
 			if(i < max_chng_pts-1)
@@ -330,6 +336,18 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 				I[i][j] = delta[0][j];
 		}
 	}
+
+	/*
+	* Computation of the values of the vecteur matrix
+	* Initially every element of the vecteur matrix is initialized to -1E100, when the loop runs over max_chng_pts
+	* Then, the value of elements of the vecteur matrix is computed by taking the summation of the element of the 'I'
+	* matrix from column 'u' which is the same as the index of the vecteur matrix and the corresponding "[u][l]"th index of
+	* Delta and Exterieur matrix.
+	* Then, a loop is run over to calculate the max of all the elements of the vecteur matrix, that is stored in
+	* variable 'max', and its corresonding index is stored in variable 'ind_max'.
+	* After calculating 'max' and 'ind_max', the 'max' is stored in the 'I' matrix and the 'ind_max' is stored in the
+	* t_matrix.
+	*/
 
 	for (k = 1; k <= max_chng_pts - 1; k++) {
 		for (l = k; l < size_matrix; l++) {
@@ -352,6 +370,12 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		}
 	}
 
+	/*
+	* After the calculation of the value of the elements of the 'I' matrix, the last column of the elements of
+	* the 'I' matrix is stored in the 'out_log_likelihood' matrix.
+	* The max of the last column of the 'I' matrix is stored in the variable 'max' and the index of the variable
+	* 'max' is stored in the variable 'ind_max'
+	*/
 	ind_max=0;
 	max=I[0][size_matrix-1];
 	for (i=0;i<max_chng_pts;i++) {
@@ -362,6 +386,11 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		}
 	}
 
+	/*
+	* A loop is run over 'max_chng_pts x max_chng_pts', and the elements of the matrix 't_est' is computed
+	* The diagonal elements of 't_est matrix' is intialized with value '(size_matrix -1)' and the
+	* remaining elements are initialized to -1.
+	*/
 	for (i = 0; i < max_chng_pts; i++) {
 		for (j = 0; j < max_chng_pts; j++) {
 			if(i != j)
@@ -371,14 +400,23 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		}
 	}
 
-	/////// Calculating change-point /////////
+	/*
+	* Calculation of change-point 
+	*/
+
 	for (j = 1; j < max_chng_pts; j++) {
 		for (k = j - 1; k >= 0; k--) {
 			t_est[j][k] = t_matrix[k][(int)t_est[j][k + 1]];
 		}
 	}
 
-	//////// Calculating max index /////////
+	/* 
+	* Computation of the elements of the matrix 'out_t_hat'
+	* The values of the elements of the matrix 'out_t_hat' contains the change-points where the
+	* log likelihood is maximized.
+	* And the values of the elements of the matrix 'out_est_chng_pt' contains the estimation of the max
+	* change points for different values of change points.
+	*/
 
 	for (i = 0; i < max_chng_pts; i++) {
 		out_t_hat[i] = (int) t_est[ind_max][i] + 1;
