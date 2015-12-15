@@ -27,7 +27,7 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	 * End sanitizing input data
 	 */
 
-	int i, j, k, l, size_mat_extr, i_coin, j_coin, size_coin, n_coin, size_mu;
+	int i, j, k, l, x, size_mat_extr, i_coin, j_coin, size_coin, n_coin, size_mu;
 	int ind_max, u;
 	double sum, sum_hat, loglambdahat, sum_carr;
 	double max, mu_hat, var_hat, phi_hat, lambda_hat, mu;
@@ -109,14 +109,19 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	i_coin = n_coin;
 	sum_hat = 0;
 
+	if (strcmp(distrib, "B") == 0) {
+		x = j_coin - 1;
+	} else {
+		x = j_coin;
+	}
+
 	for (i = 0; i < i_coin; i++) {
-		for (j = j_coin; j < size_matrix; j++) {
+		for (j = x; j < size_matrix; j++) {
 			if ((j - j_coin) >= i) {
 				sum_hat = sum_hat + y[i][j];
 			}
 		}
 	}
-
 
 	// Poisson Distribution
 	if (strcmp(distrib, "P") == 0) {
