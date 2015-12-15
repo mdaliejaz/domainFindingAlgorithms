@@ -84,6 +84,20 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		D[0][k] = T[k][k];
 	}
 
+	/*
+	 * Calulating the rest of the elements of matrices T and D.
+	 * Used in both D and Dplus.
+	 */
+	for (i = 1; i < (size_matrix - 1); i++) {
+		for (j = (i + 1); j < size_matrix; j++) {
+			sum = 0;
+			for (k = 0; k <= i; k++) sum = sum + y[k][j];
+			T[i][j] = T[i][(j - 1)] + sum;
+			R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
+			D[i][j] = T[j][j] - T[(i - 1)][j];
+		}
+	}
+
 
 	// Poisson Distribution
 	if (strcmp(distrib, "P") == 0) {
@@ -96,17 +110,6 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 				Delta[0][k] = D[0][k] * (log(D[0][k]) - log((pow(k, 2) + k) / 2) - 1);
 			if (D[k][k] != 0)
 				Delta[k][k] = D[k][k] * (log(D[k][k]) - 1);
-		}
-
-		/* Common for D and Dplus */
-		for (i = 1; i < (size_matrix - 1); i++) {
-			for (j = (i + 1); j < size_matrix; j++) {
-				sum = 0;
-				for (k = 0; k <= i; k++) sum = sum + y[k][j];
-				T[i][j] = T[i][(j - 1)] + sum;
-				R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
-				D[i][j] = T[j][j] - T[(i - 1)][j];
-			}
 		}
 
 		if (strcmp(model, "Dplus") == 0) {
@@ -187,17 +190,6 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 				Delta[k][k] = -(phi_hat + D[k][k]) * log(phi_hat + D[k][k]) + D[k][k] * log(D[k][k]);
 		}
 
-		/* Common for D and Dplus */
-		for (i = 1; i < (size_matrix - 1); i++) {
-			for (j = (i + 1); j < size_matrix; j++) {
-				sum = 0;
-				for (k = 0; k <= i; k++) sum = sum + y[k][j];
-				T[i][j] = T[i][(j - 1)] + sum;
-				R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
-				D[i][j] = T[j][j] - T[(i - 1)][j];
-			}
-		}
-
 		if (strcmp(model, "Dplus") == 0) {
 			for (i = 1; i < (size_matrix - 1); i++) {
 				for (j = (i + 1); j < size_matrix; j++) {
@@ -262,17 +254,6 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 			mu = D[0][k] / ((pow(k + 1, 2) + k + 1) / 2);
 			Delta[0][k] = -(Dcarr[0][k] - D[0][k] * mu);
 			Delta[k][k] = 0;
-		}
-
-		/* Common for D and Dplus */
-		for (i = 1; i < (size_matrix - 1); i++) {
-			for (j = (i + 1); j < size_matrix; j++) {
-				sum = 0;
-				for (k = 0; k <= i; k++) sum = sum + y[k][j];
-				T[i][j] = T[i][(j - 1)] + sum;
-				R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
-				D[i][j] = T[j][j] - T[(i - 1)][j];
-			}
 		}
 
 		if (strcmp(model, "Dplus") == 0) {
