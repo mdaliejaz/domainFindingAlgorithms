@@ -98,19 +98,24 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 				Delta[k][k] = D[k][k] * (log(D[k][k]) - 1);
 		}
 
+		/* Common for D and Dplus */
+		for (i = 1; i < (size_matrix - 1); i++) {
+			for (j = (i + 1); j < size_matrix; j++) {
+				sum = 0;
+				for (k = 0; k <= i; k++) sum = sum + y[k][j];
+				T[i][j] = T[i][(j - 1)] + sum;
+				R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
+				D[i][j] = T[j][j] - T[(i - 1)][j];
+			}
+		}
+
 		if (strcmp(model, "Dplus") == 0) {
 			for (i = 1; i < (size_matrix - 1); i++) {
 				for (j = (i + 1); j < size_matrix; j++) {
-					sum = 0;
-					for (k = 0; k <= i; k++) sum = sum + y[k][j];
-					T[i][j] = T[i][(j - 1)] + sum;
-					R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
-					D[i][j] = T[j][j] - T[(i - 1)][j];
 					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
 					if ((D[i][j] != 0) && (size_mat_extr != 0)) {
 						Delta[i][j] = D[i][j] * (log(D[i][j]) - log(size_mat_extr) - 1);
 					}
-
 					size_mat_extr = i * (j - i + 1);
 					if ((R[i][j] != 0) && (size_mat_extr != 0)) {
 						Exterieur[i][j] = R[i][j] * (log(R[i][j]) - log(size_mat_extr) - 1);
@@ -139,11 +144,6 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 
 			for (i = 1; i < (size_matrix - 1); i++) {
 				for (j = (i + 1); j < size_matrix; j++) {
-					sum = 0;
-					for (k = 0; k <= i; k++) sum = sum + y[k][j];
-					T[i][j] = T[i][(j - 1)] + sum;
-					R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
-					D[i][j] = T[j][j] - T[(i - 1)][j];
 					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
 					if ((D[i][j] != 0) && (size_mat_extr != 0)) {
 						Delta[i][j] = D[i][j] * (log(D[i][j]) - log(size_mat_extr) - 1);
@@ -187,14 +187,20 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 				Delta[k][k] = -(phi_hat + D[k][k]) * log(phi_hat + D[k][k]) + D[k][k] * log(D[k][k]);
 		}
 
+		/* Common for D and Dplus */
+		for (i = 1; i < (size_matrix - 1); i++) {
+			for (j = (i + 1); j < size_matrix; j++) {
+				sum = 0;
+				for (k = 0; k <= i; k++) sum = sum + y[k][j];
+				T[i][j] = T[i][(j - 1)] + sum;
+				R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
+				D[i][j] = T[j][j] - T[(i - 1)][j];
+			}
+		}
+
 		if (strcmp(model, "Dplus") == 0) {
 			for (i = 1; i < (size_matrix - 1); i++) {
 				for (j = (i + 1); j < size_matrix; j++) {
-					sum = 0;
-					for (k = 0; k <= i; k++) sum = sum + y[k][j];
-					T[i][j] = T[i][(j - 1)] + sum;
-					R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
-					D[i][j] = T[j][j] - T[(i - 1)][j];
 					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
 					if ((D[i][j] > 0) && (size_mat_extr != 0)) {
 						mu = D[i][j] / size_mat_extr;
@@ -211,11 +217,6 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		else if (strcmp(model, "D") == 0) {
 			for (i = 1; i < (size_matrix - 1); i++) {
 				for (j = (i + 1); j < size_matrix; j++) {
-					sum = 0;
-					for (k = 0; k <= i; k++) sum = sum + y[k][j];
-					T[i][j] = T[i][(j - 1)] + sum;
-					R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
-					D[i][j] = T[j][j] - T[(i - 1)][j];
 					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
 					if ((D[i][j] > 0) && (size_mat_extr != 0)) {
 						mu = D[i][j] / size_mat_extr;
@@ -262,22 +263,30 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 			Delta[0][k] = -(Dcarr[0][k] - D[0][k] * mu);
 			Delta[k][k] = 0;
 		}
+
+		/* Common for D and Dplus */
+		for (i = 1; i < (size_matrix - 1); i++) {
+			for (j = (i + 1); j < size_matrix; j++) {
+				sum = 0;
+				for (k = 0; k <= i; k++) sum = sum + y[k][j];
+				T[i][j] = T[i][(j - 1)] + sum;
+				R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
+				D[i][j] = T[j][j] - T[(i - 1)][j];
+			}
+		}
+
 		if (strcmp(model, "Dplus") == 0) {
 			for (i = 1; i < (size_matrix - 1); i++) {
 				for (j = (i + 1); j < size_matrix; j++) {
-					sum = 0; sum_carr = 0;
+					sum_carr = 0;
 					for (k = 0; k <= i; k++) {
-						sum = sum + y[k][j];
 						sum_carr = sum_carr + pow(y[k][j], 2);
 					}
-					T[i][j] = T[i][(j - 1)] + sum;
-					R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
-					D[i][j] = T[j][j] - T[(i - 1)][j];
 					Tcarr[i][j] = Tcarr[i][(j - 1)] + sum_carr;
 					Rcarr[i][j] = Tcarr[(i - 1)][j] - Tcarr[(i - 1)][(i - 1)];
 					Dcarr[i][j] = Tcarr[j][j] - Tcarr[(i - 1)][j];
-					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
 
+					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
 					mu = D[i][j] / size_mat_extr;
 					Delta[i][j] = -(Dcarr[i][j] - D[i][j] * mu);
 
@@ -290,19 +299,15 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		else if (strcmp(model, "D") == 0) {
 			for (i = 1; i < (size_matrix - 1); i++) {
 				for (j = (i + 1); j < size_matrix; j++) {
-					sum = 0; sum_carr = 0;
+					sum_carr = 0;
 					for (k = 0; k <= i; k++) {
-						sum = sum + y[k][j];
 						sum_carr = sum_carr + pow(y[k][j], 2);
 					}
-					T[i][j] = T[i][(j - 1)] + sum;
-					R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
-					D[i][j] = T[j][j] - T[(i - 1)][j];
 					Tcarr[i][j] = Tcarr[i][(j - 1)] + sum_carr;
 					Rcarr[i][j] = Tcarr[(i - 1)][j] - Tcarr[(i - 1)][(i - 1)];
 					Dcarr[i][j] = Tcarr[j][j] - Tcarr[(i - 1)][j];
-					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
 
+					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
 					mu = D[i][j] / size_mat_extr;
 					Delta[i][j] = -(Dcarr[i][j] - D[i][j] * mu);
 
