@@ -146,25 +146,7 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 			}
 		}
 		else if (strcmp(model, "D") == 0) {
-
-<<<<<<< 1ded654511033cba780eca04b85c5ebf0557316a
-			///// Calculating lambda_hat
-=======
 			// Calculating lambda_hat
-			n_coin = (int)floor(size_matrix / 4);
-			size_coin = (n_coin + 1) * n_coin / 2;
-			j_coin = 3 * n_coin;
-			i_coin = n_coin;
-			sum = 0;
-
-			for (i = 0; i < i_coin; i++) {
-				for (j = j_coin; j < size_matrix; j++) {
-					if ((j - j_coin) >= i) {
-						sum = sum + y[i][j];
-					}
-				}
-			}
->>>>>>> WIP
 			lambda_hat = sum / size_coin;
 			loglambdahat = log(lambda_hat);
 
