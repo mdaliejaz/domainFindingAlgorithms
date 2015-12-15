@@ -12,7 +12,7 @@
 
 int Function_HiC_R(int *size, int *maximum_no_change_points,
 	char **distribution, double *matrix, int *out_t_hat,
-	double *out_log_likelihood, int *out_est_chng_pnt, char **modele)
+	double *out_log_likelihood, int *out_est_chng_pt, char **model_type)
 {
 	/*
 	 * R sends pointers of each data, keeping it that way for now.
@@ -20,9 +20,9 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	 * this method is changed.
 	 */
 	int size_matrix = *size;
-	int max_change_points = *maximum_no_change_points;
+	int max_chng_pts = *maximum_no_change_points;
 	char *distrib = *distribution;
-	char *model = *modele;
+	char *model = *model_type;
 	/*
 	 * End sanitizing input data
 	 */
@@ -32,12 +32,12 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	double sum, sum_hat, loglambdahat, sum_carr;
 	double max, mu_hat, var_hat, phi_hat, lambda_hat, mu;
 	double vecteur[size_matrix - 1];
-	double t_est[max_change_points][max_change_points], y[size_matrix][size_matrix];
+	double t_est[max_chng_pts][max_chng_pts], y[size_matrix][size_matrix];
 	double Delta[size_matrix][size_matrix], Exterieur[size_matrix][size_matrix];
 	double T[size_matrix][size_matrix], D[size_matrix][size_matrix];
 	double R[size_matrix][size_matrix], Tcarr[size_matrix][size_matrix];
 	double Dcarr[size_matrix][size_matrix], Rcarr[size_matrix][size_matrix];
-	double I[max_change_points][size_matrix], t_matrix[max_change_points - 1][size_matrix];
+	double I[max_chng_pts][size_matrix], t_matrix[max_chng_pts - 1][size_matrix];
 
 
 	// Early exit for wrong parameters
@@ -67,10 +67,11 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	}
 
 
-	/* The following code is common for all the three distributions
+	/*
+	 * The following code is common for all the three distributions
 	 * The first row and the diagonal of matrix T and D are populated
 	 */
-	/////  Calculating amounts in trapezes
+	// Calculating amounts in trapezes
 	T[0][0] = y[0][0];
 	D[0][0] = y[0][0];
 	for (k = 1; k < size_matrix; k++) {
@@ -119,7 +120,7 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 
 	// Poisson Distribution
 	if (strcmp(distrib, "P") == 0) {
-		/////  Calculating amounts in trapezes
+		// Calculating amounts in trapezes
 		if (D[0][0] != 0)
 			Delta[0][0] = D[0][0] * (log(D[0][0]) - 1);
 		for (k = 1; k < size_matrix; k++)
@@ -146,7 +147,24 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		}
 		else if (strcmp(model, "D") == 0) {
 
+<<<<<<< 1ded654511033cba780eca04b85c5ebf0557316a
 			///// Calculating lambda_hat
+=======
+			// Calculating lambda_hat
+			n_coin = (int)floor(size_matrix / 4);
+			size_coin = (n_coin + 1) * n_coin / 2;
+			j_coin = 3 * n_coin;
+			i_coin = n_coin;
+			sum = 0;
+
+			for (i = 0; i < i_coin; i++) {
+				for (j = j_coin; j < size_matrix; j++) {
+					if ((j - j_coin) >= i) {
+						sum = sum + y[i][j];
+					}
+				}
+			}
+>>>>>>> WIP
 			lambda_hat = sum / size_coin;
 			loglambdahat = log(lambda_hat);
 
@@ -289,9 +307,9 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 
 	/////// dynamic programming ///////////
 
-	for (i = 0; i <= max_change_points - 1; i++) {
+	for (i = 0; i <= max_chng_pts - 1; i++) {
 		for (j = 0; j < size_matrix; j++) {
-			if(i < max_change_points-1)
+			if(i < max_chng_pts-1)
 				t_matrix[i][j] = -1;
 			if(i!=0)
 				I[i][j] = -1E100;
@@ -300,7 +318,7 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		}
 	}
 
-	for (k = 1; k <= max_change_points - 1; k++) {
+	for (k = 1; k <= max_chng_pts - 1; k++) {
 		for (l = k; l < size_matrix; l++) {
 			for (i = 0; i < size_matrix - 1; i++) {
 				vecteur[i] = -1E100;
@@ -323,7 +341,7 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 
 	ind_max=0;
 	max=I[0][size_matrix-1];
-	for (i=0;i<max_change_points;i++) {
+	for (i=0;i<max_chng_pts;i++) {
 		out_log_likelihood[i] = I[i][size_matrix-1];
 		if((I[i][size_matrix-1])>max) {
 			max=I[i][size_matrix-1];
@@ -331,8 +349,8 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		}
 	}
 
-	for (i = 0; i < max_change_points; i++) {
-		for (j = 0; j < max_change_points; j++) {
+	for (i = 0; i < max_chng_pts; i++) {
+		for (j = 0; j < max_chng_pts; j++) {
 			if(i != j)
 				t_est[i][j] = -1;
 			else
@@ -341,7 +359,7 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	}
 
 	/////// Calculating change-point /////////
-	for (j = 1; j < max_change_points; j++) {
+	for (j = 1; j < max_chng_pts; j++) {
 		for (k = j - 1; k >= 0; k--) {
 			t_est[j][k] = t_matrix[k][(int)t_est[j][k + 1]];
 		}
@@ -349,10 +367,10 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 
 	//////// Calculating max index /////////
 
-	for (i = 0; i < max_change_points; i++) {
+	for (i = 0; i < max_chng_pts; i++) {
 		out_t_hat[i] = (int) t_est[ind_max][i] + 1;
-		for (j = 0; j < max_change_points; j++) {
-			out_est_chng_pnt[i * max_change_points + j] = (int) t_est[i][j] + 1;
+		for (j = 0; j < max_chng_pts; j++) {
+			out_est_chng_pt[i * max_chng_pts + j] = (int) t_est[i][j] + 1;
 		}
 	}
 	return (EXIT_SUCCESS);
