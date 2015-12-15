@@ -29,7 +29,7 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 
 	int i, j, k, l, size_mat_extr, i_coin, j_coin, size_coin, n_coin, size_mu;
 	int ind_max, u;
-	double sum, loglambdahat, sum_carr;
+	double sum, sum_hat, loglambdahat, sum_carr;
 	double max, mu_hat, var_hat, phi_hat, lambda_hat, mu;
 	double vecteur[size_matrix - 1];
 	double t_est[max_change_points][max_change_points], y[size_matrix][size_matrix];
@@ -91,10 +91,28 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	for (i = 1; i < (size_matrix - 1); i++) {
 		for (j = (i + 1); j < size_matrix; j++) {
 			sum = 0;
-			for (k = 0; k <= i; k++) sum = sum + y[k][j];
+			for (k = 0; k <= i; k++) 
+				sum = sum + y[k][j];
 			T[i][j] = T[i][(j - 1)] + sum;
 			R[i][j] = T[(i - 1)][j] - T[(i - 1)][(i - 1)];
 			D[i][j] = T[j][j] - T[(i - 1)][j];
+		}
+	}
+
+	/* The common code (except Dplus of Poisson distribution 
+	 * that is used to calculate hat for each distribution. 
+	 */
+	n_coin = (int)floor(size_matrix / 4);
+	size_coin = (n_coin + 1) * n_coin / 2;
+	j_coin = 3 * n_coin;
+	i_coin = n_coin;
+	sum_hat = 0;
+
+	for (i = 0; i < i_coin; i++) {
+		for (j = j_coin; j < size_matrix; j++) {
+			if ((j - j_coin) >= i) {
+				sum_hat = sum_hat + y[i][j];
+			}
 		}
 	}
 
@@ -129,19 +147,6 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		else if (strcmp(model, "D") == 0) {
 
 			///// Calculating lambda_hat
-			n_coin = (int)floor(size_matrix / 4);
-			size_coin = (n_coin + 1) * n_coin / 2;
-			j_coin = 3 * n_coin;
-			i_coin = n_coin;
-			sum = 0;
-
-			for (i = 0; i < i_coin; i++) {
-				for (j = j_coin; j < size_matrix; j++) {
-					if ((j - j_coin) >= i) {
-						sum = sum + y[i][j];
-					}
-				}
-			}
 			lambda_hat = sum / size_coin;
 			loglambdahat = log(lambda_hat);
 
@@ -157,24 +162,18 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 			}
 		}
 	} else if (strcmp(distrib, "B") == 0) {
+
 		///// Calculating phi_hat and mu_hat
-
-		n_coin = (int)floor(size_matrix / 4);
-
-		size_coin = (n_coin + 1) * n_coin / 2;
-		j_coin = 3 * n_coin;
-		i_coin = n_coin;
-		sum = 0; sum_carr = 0;
+		sum_carr = 0;
 
 		for (i = 0; i < i_coin; i++) {
 			for (j = (j_coin - 1); j < size_matrix; j++) {
 				if ((j - j_coin) >= i) {
-					sum = sum + y[i][j];
 					sum_carr = sum_carr + pow(y[i][j], 2);
 				}
 			}
 		}
-		mu_hat = sum / size_coin;
+		mu_hat = sum_hat / size_coin;
 		var_hat = sum_carr / (size_coin - 1) - size_coin * pow(mu_hat, 2) / (size_coin - 1);
 		phi_hat = pow(mu_hat, 2) / (var_hat - mu_hat);
 
@@ -222,20 +221,8 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 			}
 		}
 	} else if (strcmp(distrib, "G") == 0) {
-		n_coin = (int)floor(size_matrix / 4);
-		size_coin = (n_coin + 1) * n_coin / 2;
-		j_coin = 3 * n_coin;
-		i_coin = n_coin;
-		sum = 0;
 
-		for (i = 0; i < i_coin; i++) {
-			for (j = j_coin; j < size_matrix; j++) {
-				if ((j - j_coin) >= i) {
-					sum = sum + y[i][j];
-				}
-			}
-		}
-		mu_hat = sum / size_coin;
+		mu_hat = sum_hat / size_coin;
 
 		//  Calculating amounts in trapezes
 		Tcarr[0][0] = pow(y[0][0], 2);
