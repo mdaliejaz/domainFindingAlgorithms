@@ -10,8 +10,9 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_sf_gamma.h>
 
-int Function_HiC_R(int *size, int *maximum_no_change_points, char **distribution,
-	double *matrix, int *tchap, double *Jvect, int *t_est_mat, char **modele)
+int Function_HiC_R(int *size, int *maximum_no_change_points,
+	char **distribution, double *matrix, int *out_t_hat,
+	double *out_log_likelihood, int *out_est_chng_pnt, char **modele)
 {
 	/*
 	 * R sends pointers of each data, keeping it that way for now.
@@ -350,7 +351,7 @@ int Function_HiC_R(int *size, int *maximum_no_change_points, char **distribution
 	ind_max=0;
 	max=I[0][size_matrix-1];
 	for (i=0;i<max_change_points;i++) {
-		Jvect[i] = I[i][size_matrix-1];
+		out_log_likelihood[i] = I[i][size_matrix-1];
 		if((I[i][size_matrix-1])>max) {
 			max=I[i][size_matrix-1];
 			ind_max=i;
@@ -376,9 +377,9 @@ int Function_HiC_R(int *size, int *maximum_no_change_points, char **distribution
 	//////// Calculating max index /////////
 
 	for (i = 0; i < max_change_points; i++) {
-		tchap[i] = (int) t_est[ind_max][i] + 1;
+		out_t_hat[i] = (int) t_est[ind_max][i] + 1;
 		for (j = 0; j < max_change_points; j++) {
-			t_est_mat[i * max_change_points + j] = (int) t_est[i][j] + 1;
+			out_est_chng_pnt[i * max_change_points + j] = (int) t_est[i][j] + 1;
 		}
 	}
 	return (EXIT_SUCCESS);
