@@ -4,15 +4,36 @@
 #include <string.h>
 #include <math.h>
 
+/*
+ * This function is called from the R module with the following parameters
+ * size - size of the input matrix
+ * maximum_no_change_points - Maximum number of change points that needs to
+ *							  be calculated.
+ * distribution - The distribution to be used:
+ *				  a) Poisson (P)
+ *				  b) Gaussian (G)
+ *				  c) Negative Binomial (B)
+ * matrix - The input matrix
+ * out_t_hat - Pointer returned back to R with the estimated change points
+ * out_log_likelihood - Pointer returned back to R with log-likelihood for
+ *						different number of change-points
+ * out_est_chng_pt - Pointer returned back to R with matrix of the
+ *					 estimated change-points for different possible number
+ *					 of change-points
+ * model_type - D or Dplus (block digonal or extended block diagonal)
+ */
 int Function_HiC_R(int *size, int *maximum_no_change_points,
                    char **distribution, double *matrix, int *out_t_hat,
                    double *out_log_likelihood, int *out_est_chng_pt,
                    char **model_type)
 {
 	/*
-	 * R sends pointers of each data, keeping it that way for now.
-	 * This section can be removed if parameters received by
-	 * this method is changed.
+	 * R sends pointers of each data to this matrix.
+	 * Getting the data from these pointers.
+	 * Note:
+	 * This section can be removed if parameters received by the method is
+	 * changed, that is, if the method is interfaced with any other
+	 * statistical computing Language other than R
 	 */
 	int size_matrix = *size;
 	int max_chng_pts = *maximum_no_change_points;
@@ -22,7 +43,7 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	 * End sanitizing input data
 	 */
 
-	int i, j, k, l, x, size_mat_extr, i_coin, j_coin, size_coin, n_coin;
+	int i, j, k, l, x, size_mat_extr, i_corner, j_corner, size_corner, n_corner;
 	int ind_max, u, size_mu;
 	double sum, sum_hat, loglambdahat, sum_carr;
 	double max, mu_hat, var_hat, phi_hat, lambda_hat, mu;
@@ -46,7 +67,7 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	// initialize all the matrices
 	for (i = 0; i < size_matrix; i++) {
 		for (j = 0; j < size_matrix; j++) {
-			// Copying input data matrix to matrix Y
+			// Copying input data matrix (received as a pointer) to matrix Y
 			Y[i][j] = matrix[i * size_matrix + j];
 			// 1E100 = scientific notation for vary large number.
 			// -1E100 = (-) 1 followed by 100 zeroes
@@ -78,7 +99,6 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	 * First row of D matrix copies the diagonal matrix of T.
 	 * Diagonal of D matrix copies the diagonal matrix of Y.
 	 */
-	// Calculating amounts in trapezes
 	T[0][0] = Y[0][0];
 	D[0][0] = Y[0][0];
 	for (k = 1; k < size_matrix; k++) {
@@ -116,33 +136,49 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 		}
 	}
 
-	/* The common code (except Dplus of Poisson distribution)
+	/*
+	 * The common code (except Dplus of Poisson distribution)
 	 * that is used to calculate hat for each distribution.
 	 */
-	n_coin = (int)floor(size_matrix / 4);
-	size_coin = (n_coin + 1) * n_coin / 2;
-	j_coin = 3 * n_coin;
-	i_coin = n_coin;
+	n_corner = (int)floor(size_matrix / 4);
+	size_corner = (n_corner + 1) * n_corner / 2;
+	j_corner = 3 * n_corner;
+	i_corner = n_corner;
 	sum_hat = 0;
 
-	/* For Binomial distributon the iteration for the inner loop begins
-	 * from j_coin - 1
+	/*
+	 * To calculate the sum of non domain regions in the
+	 * D model (of Poisson and Gaussian), find the sum of Y[i][j],
+	 * where 0 <= i < (size/4) and 3(size/4) <= j < size,
+	 * that is find the mean from top right corner, and use it for
+	 * all the calculations since the mean is considered constant in D model.
+	 *
+	 * Note:
+	 * For Binomial distributon the iteration for the inner loop begins
+	 * from j_corner - 1 in the old French version of this code.
+	 * But this is probably a bug and as such we are not doing that. It being
+	 * a bug can be confirmed from Fig 2 in the referenced paper:
+	 * Two-dimensional segmentation for analyzing Hi-C data.
+	 * However, for consistency, we are not changing the behavior.
+	 * The if condition needs to be removed in the following to make the
+	 * behavior correct.
 	 */
 	if (strcmp(distrib, "B") == 0) {
-		x = j_coin - 1;
+		x = j_corner - 1;
 	} else {
-		x = j_coin;
+		x = j_corner;
 	}
+
 	/* Calculation of sum_hat */
-	for (i = 0; i < i_coin; i++) {
+	for (i = 0; i < i_corner; i++) {
 		for (j = x; j < size_matrix; j++) {
-			if ((j - j_coin) >= i) {
+			if ((j - j_corner) >= i) {
 				sum_hat = sum_hat + Y[i][j];
 			}
 		}
 	}
 
-	// Poisson Distribution
+	/* Poisson Distribution */
 	if (strcmp(distrib, "P") == 0) {
 		/* Populating the delta matrix */
 		if (D[0][0] != 0)
@@ -170,8 +206,8 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 			}
 		}
 		else if (strcmp(model, "D") == 0) {
-			// Calculating lambda_hat
-			lambda_hat = sum_hat / size_coin;
+			/* Calculating lambda_hat */
+			lambda_hat = sum_hat / size_corner;
 			loglambdahat = log(lambda_hat);
 
 			/* Populating the delta matrix */
@@ -187,35 +223,33 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 			}
 		}
 	} else if (strcmp(distrib, "B") == 0) {
-
-		///// Calculating phi_hat and mu_hat
+		/* Calculating phi_hat and mu_hat */
 		sum_carr = 0;
-
-		for (i = 0; i < i_coin; i++) {
-			for (j = (j_coin - 1); j < size_matrix; j++) {
-				if ((j - j_coin) >= i) {
+		for (i = 0; i < i_corner; i++) {
+			for (j = (j_corner - 1); j < size_matrix; j++) {
+				if ((j - j_corner) >= i) {
 					sum_carr = sum_carr + pow(Y[i][j], 2);
 				}
 			}
 		}
-		mu_hat = sum_hat / size_coin;
-		var_hat = sum_carr / (size_coin - 1) - size_coin * pow(mu_hat, 2) /
-					(size_coin - 1);
+		mu_hat = sum_hat / size_corner;
+		var_hat = sum_carr / (size_corner - 1) - size_corner * pow(mu_hat, 2) /
+		          (size_corner - 1);
 		phi_hat = pow(mu_hat, 2) / (var_hat - mu_hat);
 
 		/* Populating the delta matrix */
 		if (((phi_hat + D[0][0]) > 0) && (D[0][0] > 0))
 			delta[0][0] = -(phi_hat + D[0][0]) * log(phi_hat +
-							D[0][0]) + D[0][0] * log(D[0][0]);
+			              D[0][0]) + D[0][0] * log(D[0][0]);
 		for (k = 1; k < size_matrix; k++) {
 			size_mu = ((pow(k + 1, 2) + k + 1) / 2);
 			mu = D[0][k] / size_mu;
 			if (D[0][k] > 0)
 				delta[0][k] = -(size_mu * phi_hat + D[0][k]) *
-								log(phi_hat + mu) + D[0][k] * log(mu);
+				              log(phi_hat + mu) + D[0][k] * log(mu);
 			if (D[k][k] > 0)
 				delta[k][k] = -(phi_hat + D[k][k]) * log(phi_hat + D[k][k]) +
-														D[k][k] * log(D[k][k]);
+				              D[k][k] * log(D[k][k]);
 		}
 
 		if (strcmp(model, "Dplus") == 0) {
@@ -225,13 +259,13 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 					if ((D[i][j] > 0) && (size_mat_extr != 0)) {
 						mu = D[i][j] / size_mat_extr;
 						delta[i][j] = -(size_mat_extr * phi_hat + D[i][j]) *
-										log(phi_hat + mu) + D[i][j] * log(mu);
+						              log(phi_hat + mu) + D[i][j] * log(mu);
 					}
 					size_mat_extr = i * (j - i + 1);
 					if ((R[i][j] > 0) && (size_mat_extr != 0)) {
 						mu = R[i][j] / size_mat_extr;
 						exterior[i][j] = -(size_mat_extr * phi_hat + R[i][j]) *
-										log(phi_hat + mu) + R[i][j] * log(mu);
+						                 log(phi_hat + mu) + R[i][j] * log(mu);
 					}
 				}
 			}
@@ -243,25 +277,21 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 					if ((D[i][j] > 0) && (size_mat_extr != 0)) {
 						mu = D[i][j] / size_mat_extr;
 						delta[i][j] = -(size_mat_extr * phi_hat + D[i][j]) *
-										log(phi_hat + mu) + D[i][j] * log(mu);
+						              log(phi_hat + mu) + D[i][j] * log(mu);
 					}
 					size_mat_extr = i * (j - i + 1);
 					if (((phi_hat + mu_hat) > 0) && (mu_hat != 0)) {
 						exterior[i][j] = -(size_mat_extr * phi_hat + R[i][j]) *
-								log(phi_hat + mu_hat) + R[i][j] * log(mu_hat);
+						                 log(phi_hat + mu_hat) + R[i][j] * log(mu_hat);
 					}
 				}
 			}
 		}
 	} else if (strcmp(distrib, "G") == 0) {
-
-		mu_hat = sum_hat / size_coin;
-
-		//  Calculating amounts in trapezes
+		mu_hat = sum_hat / size_corner;
 		Tcarr[0][0] = pow(Y[0][0], 2);
 		Dcarr[0][0] = pow(Y[0][0], 2);
 		delta[0][0] = 0;
-
 		/* Populating the delta matrix */
 		for (k = 1; k < size_matrix; k++) {
 			Tcarr[0][k] = Tcarr[0][(k - 1)] + pow(Y[0][k], 2);
@@ -276,7 +306,6 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 			delta[0][k] = -(Dcarr[0][k] - D[0][k] * mu);
 			delta[k][k] = 0;
 		}
-
 		if (strcmp(model, "Dplus") == 0) {
 			for (i = 1; i < (size_matrix - 1); i++) {
 				for (j = (i + 1); j < size_matrix; j++) {
@@ -287,11 +316,9 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 					Tcarr[i][j] = Tcarr[i][(j - 1)] + sum_carr;
 					Rcarr[i][j] = Tcarr[(i - 1)][j] - Tcarr[(i - 1)][(i - 1)];
 					Dcarr[i][j] = Tcarr[j][j] - Tcarr[(i - 1)][j];
-
 					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
 					mu = D[i][j] / size_mat_extr;
 					delta[i][j] = -(Dcarr[i][j] - D[i][j] * mu);
-
 					size_mat_extr = i * (j - i + 1);
 					mu = R[i][j] / size_mat_extr;
 					exterior[i][j] = -(Rcarr[i][j] - pow(mu, 2) * size_mat_extr);
@@ -308,26 +335,24 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 					Tcarr[i][j] = Tcarr[i][(j - 1)] + sum_carr;
 					Rcarr[i][j] = Tcarr[(i - 1)][j] - Tcarr[(i - 1)][(i - 1)];
 					Dcarr[i][j] = Tcarr[j][j] - Tcarr[(i - 1)][j];
-
 					size_mat_extr = (j - i + 1) * (j - i) / 2 + (j - i + 1);
 					mu = D[i][j] / size_mat_extr;
 					delta[i][j] = -(Dcarr[i][j] - D[i][j] * mu);
-
 					size_mat_extr = i * (j - i + 1);
 					exterior[i][j] = -(Rcarr[i][j] - pow(mu_hat, 2) * size_mat_extr);
 				}
 			}
 		}
-	} else
-		return EXIT_FAILURE;
+	}
 
 	/*dynamic programming */
 
 	/*
-	 * Computation of the elements of matrix 'I'
-	 * The value of the elements of the first row of matrix 'I' is the same as
-	 * the elements of the first row of Delta matrix
-	 * The remaining elements of the 'I' matrix are initialized to -1E100.
+	 * Computation of the elements of matrix 'I' - used to compute the maximum
+	 *										over the sum of delta and exterior.
+	 * The value of the elements of the first row of matrix 'I' is initialized
+	 * with the elements of the first row of Delta matrix,
+	 * The remaining elements of the matrix 'I' are initialized to -1E100.
 	 */
 	for (i = 0; i <= max_chng_pts - 1; i++) {
 		for (j = 0; j < size_matrix; j++) {
@@ -341,20 +366,13 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	}
 
 	/*
-	 * Computation of the values of the vecteur matrix
-	 * Initially every element of the vecteur matrix is initialized to -1E100,
-	 * when the loop runs over max_chng_pts. Then, the value of elements of the
-	 * vecteur matrix is computed by taking the summation of the element of the
-	 * 'I' matrix from column 'u' which is the same as the index of the vecteur
-	 * matrix and the corresponding "[u][l]"th index of Delta and
-	 * Exterior matrix.
-	 * Then, a loop is run over to calculate the max of all the elements of
-	 * the vecteur matrix, that is stored in variable 'max', and its
-	 * corresonding index is stored in variable 'ind_max'.
-	 * After calculating 'max' and 'ind_max', the 'max' is stored in the
-	 * 'I' matrix and the 'ind_max' is stored in the t_matrix.
+	 * Using temporary max_vector matrix to find max for matrix 'I'.
+	 * The values in max_vector is computed using matrices I, delta and
+	 * exterior followed by finding the max among all the max_vector values
+	 * which is stored in matrix I and the corresponding index in a
+	 * matrix called t_matrix which will be used to generate the estimated
+	 * change points.
 	 */
-
 	for (k = 1; k <= max_chng_pts - 1; k++) {
 		for (l = k; l < size_matrix; l++) {
 			for (i = 0; i < size_matrix - 1; i++) {
@@ -379,9 +397,9 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	/*
 	 * After the calculation of the value of the elements of the 'I' matrix,
 	 * the last column of the elements of the 'I' matrix is stored in the
-	 * 'out_log_likelihood' matrix. The max of the last column of the 'I' matrix
-	 * is stored in the variable 'max' and the index of the variable 'max' is
-	 * stored in the variable 'ind_max'
+	 * 'out_log_likelihood' matrix. Also the index of the maximum element is
+	 * stored in ind_max to later find the index for max log likelihood for
+	 * different change points
 	 */
 	ind_max = 0;
 	max = I[0][size_matrix - 1];
@@ -394,10 +412,8 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	}
 
 	/*
-	 * A loop is run over 'max_chng_pts x max_chng_pts', and the elements of the
-	 * matrix 't_est' is computed.
-	 * The diagonal elements of 't_est matrix' is intialized with value
-	 * '(size_matrix -1)' and the remaining elements are initialized to -1.
+	 * Initializing estmimation matrix
+	 * (will be copied over to returning pointer)
 	 */
 	for (i = 0; i < max_chng_pts; i++) {
 		for (j = 0; j < max_chng_pts; j++) {
@@ -411,22 +427,20 @@ int Function_HiC_R(int *size, int *maximum_no_change_points,
 	/*
 	 * Calculation of change-point
 	 */
-
 	for (j = 1; j < max_chng_pts; j++) {
 		for (k = j - 1; k >= 0; k--) {
 			t_est[j][k] = t_matrix[k][(int)t_est[j][k + 1]];
 		}
 	}
 
-	/* 
-	 * Computation of the elements of the matrix 'out_t_hat'
+	/*
+	 * Copying data to the returning pointers.
 	 * The values of the elements of the matrix 'out_t_hat' contains the
 	 * change-points where the log likelihood is maximized.
-	 * And the values of the elements of the matrix 'out_est_chng_pt' contains
-	 * the estimation of the max change points for different values of
+	 * The values of the elements of the matrix 'out_est_chng_pt' contains
+	 * the estimation of the max change points for different possible number of
 	 * change points.
 	 */
-
 	for (i = 0; i < max_chng_pts; i++) {
 		out_t_hat[i] = (int) t_est[ind_max][i] + 1;
 		for (j = 0; j < max_chng_pts; j++) {
